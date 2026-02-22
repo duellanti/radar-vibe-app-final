@@ -1,354 +1,898 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+import { useState, useCallback, useSyncExternalStore } from "react";
 
-/* LIGHT MODE */
-:root {
-  --button-outline: rgba(0,0,0, .10);
-  --badge-outline: rgba(0,0,0, .05);
-  --opaque-button-border-intensity: -8;
-  --elevate-1: rgba(0,0,0, .03);
-  --elevate-2: rgba(0,0,0, .08);
-  --background: 0 0% 4%;
-  --foreground: 43 30% 75%;
-  --border: 0 0% 14%;
-  --card: 0 0% 7%;
-  --card-foreground: 43 30% 75%;
-  --card-border: 0 0% 12%;
-  --sidebar: 0 0% 5%;
-  --sidebar-foreground: 43 30% 75%;
-  --sidebar-border: 0 0% 12%;
-  --sidebar-primary: 43 74% 49%;
-  --sidebar-primary-foreground: 0 0% 4%;
-  --sidebar-accent: 43 15% 12%;
-  --sidebar-accent-foreground: 43 30% 80%;
-  --sidebar-ring: 43 74% 49%;
-  --popover: 0 0% 8%;
-  --popover-foreground: 43 30% 75%;
-  --popover-border: 0 0% 15%;
-  --primary: 43 74% 49%;
-  --primary-foreground: 0 0% 4%;
-  --secondary: 43 10% 14%;
-  --secondary-foreground: 43 30% 80%;
-  --muted: 43 5% 12%;
-  --muted-foreground: 43 10% 50%;
-  --accent: 43 15% 12%;
-  --accent-foreground: 43 30% 80%;
-  --destructive: 0 84% 40%;
-  --destructive-foreground: 0 0% 98%;
-  --input: 0 0% 25%;
-  --ring: 43 74% 49%;
-  --chart-1: 43 74% 49%;
-  --chart-2: 30 68% 50%;
-  --chart-3: 20 65% 48%;
-  --chart-4: 10 70% 45%;
-  --chart-5: 0 75% 42%;
-  --font-sans: Montserrat, sans-serif;
-  --font-serif: Playfair Display, serif;
-  --font-mono: JetBrains Mono, monospace;
-  --radius: .5rem;
-  --shadow-2xs: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
-  --shadow-xs: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
-  --shadow-sm: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 1px 2px -1px hsl(0 0% 0% / 0.00);
-  --shadow: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 1px 2px -1px hsl(0 0% 0% / 0.00);
-  --shadow-md: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 2px 4px -1px hsl(0 0% 0% / 0.00);
-  --shadow-lg: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 4px 6px -1px hsl(0 0% 0% / 0.00);
-  --shadow-xl: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 8px 10px -1px hsl(0 0% 0% / 0.00);
-  --shadow-2xl: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
-  --tracking-normal: 0em;
-  --spacing: 0.25rem;
+const translations: Record<string, Record<string, string>> = {
+  en: {
+    "app.name": "RADAR VIBE",
+    "app.tagline": "GPS Social Map",
+    "header.profile": "Profile",
+    "header.createVibe": "Create Vibe",
+    "header.premium": "Go Premium",
+    "header.premiumBadge": "PREMIUM",
+    "header.messages": "Messages",
+    "search.placeholder": "Search vibes, people, keywords...",
+    "map.nearYou": "Near you",
+    "map.vibesNearby": "vibes nearby",
+    "map.usersNearby": "users nearby",
+    "map.legendFree": "Free",
+    "map.legendPremium": "Premium",
+    "vibe.live": "LIVE",
+    "vibe.planned": "PLANNED",
+    "vibe.expiresIn": "Expires in",
+    "vibe.create": "Create Vibe",
+    "vibe.created": "Your vibe is now live!",
+    "vibe.title": "Title",
+    "vibe.titlePlaceholder": "e.g. Rooftop Chill, Game Night...",
+    "vibe.description": "Description",
+    "vibe.descPlaceholder": "What's the vibe?",
+    "vibe.type": "Type",
+    "vibe.photo": "Add Photo",
+    "vibe.schedule": "Schedule",
+    "vibe.scheduled": "Scheduled",
+    "vibe.premiumOnly": "Premium Only",
+    "vibe.liveExpiry": "Live vibes expire in {hours} hours",
+    "vibe.createdAgo": "Created",
+    "vibe.messageCreator": "Message Creator",
+    "profile.edit": "Edit Profile",
+    "profile.displayName": "Display Name",
+    "profile.bio": "Bio",
+    "profile.bioPlaceholder": "Tell others about you...",
+    "profile.socialLinks": "Social Links",
+    "profile.keywords": "Keywords",
+    "profile.keywordsPlaceholder": "gaming, music, books... (comma separated)",
+    "profile.keywordsHint": "Used for Bussola proximity matching",
+    "profile.ghostMode": "Ghost Mode",
+    "profile.ghostDesc": "Browse the map invisibly",
+    "profile.language": "Language",
+    "profile.logout": "Log Out",
+    "profile.save": "Save",
+    "profile.tapToChange": "Tap to change photo",
+    "profile.photoUpdated": "Photo updated!",
+    "auth.login": "Log In",
+    "auth.register": "Sign Up",
+    "auth.username": "Username",
+    "auth.password": "Password",
+    "auth.noAccount": "Don't have an account?",
+    "auth.hasAccount": "Already have an account?",
+    "auth.welcome": "Welcome to Radar Vibe",
+    "auth.subtitle": "Discover real-time meetups near you",
+    "msg.placeholder": "Type a message...",
+    "msg.send": "Send",
+    "msg.limitReached": "Daily limit reached",
+    "msg.watchAd": "Watch ad for 3 more",
+    "msg.remaining": "messages remaining today",
+    "msg.unlimited": "Unlimited messages",
+    "msg.noConversations": "No conversations yet",
+    "msg.startConversation": "Start the conversation",
+    "premium.title": "GO PREMIUM",
+    "premium.subtitle": "Unlock the full experience",
+    "premium.monthly": "Monthly",
+    "premium.yearly": "Yearly",
+    "premium.perMonth": "/month",
+    "premium.perYear": "/year",
+    "premium.subscribe": "Subscribe Now",
+    "premium.feature1": "See ALL users on the map",
+    "premium.feature2": "Unlimited messaging",
+    "premium.feature3": "Zero ads",
+    "premium.feature4": "Ghost Mode",
+    "premium.feature5": "Proximity Compass (Bussola)",
+    "premium.feature6": "Plan future vibes",
+    "premium.save": "Save 62%",
+    "ad.banner": "Ad Space",
+    "ad.interstitial": "Ad",
+    "ad.continue": "Continue",
+    "ad.removePremium": "Go Premium to remove ads",
+    "ad.videoPlaceholder": "Video ad loading...",
+    "ad.wait": "Wait",
+    "bussola.title": "Bussola",
+    "bussola.subtitle": "Find people by keyword",
+    "bussola.keyword": "Enter keyword",
+    "bussola.search": "Search nearby",
+    "bussola.found": "found within 10km",
+    "bussola.noResults": "No matches nearby",
+    "common.close": "Close",
+    "common.cancel": "Cancel",
+    "common.save": "Save",
+    "common.delete": "Delete",
+    "common.loading": "Loading...",
+    "common.error": "Something went wrong",
+    "premSettings.title": "Premium Settings",
+    "premSettings.theme": "Theme",
+    "premSettings.darkLuxury": "Dark Luxury",
+    "premSettings.darkLuxuryDesc": "Pure black background with gold accents",
+    "premSettings.goldTheme": "Gold Theme",
+    "premSettings.goldThemeDesc": "Gold background with black buttons/text",
+    "premSettings.custom": "Custom Colors",
+    "premSettings.customDesc": "Choose your own color palette",
+    "premSettings.applyCustom": "Apply Custom Theme",
+    "premSettings.primary": "Primary",
+    "premSettings.background": "Background",
+    "premSettings.card": "Card",
+    "premSettings.accent": "Accent",
+    "premSettings.perks": "Premium Perks",
+    "premSettings.exclusiveIcons": "Exclusive Map Icons",
+    "premSettings.exclusiveIconsDesc": "Custom cursors and markers for the radar",
+    "premSettings.vipBadge": "Profile VIP Badge",
+    "premSettings.vipBadgeDesc": "A VIP icon next to your username",
+    "premSettings.extendedRadar": "Extended Radar Range",
+    "premSettings.extendedRadarDesc": "Enhanced view and filter range on the map",
+    "premSettings.priorityVisibility": "Priority Visibility",
+    "premSettings.priorityVisibilityDesc": "Appear first in Bussola search results",
+    "premSettings.comingSoon": "Coming Soon",
+    "premSettings.active": "Active",
+    "premSettings.upgrade": "Upgrade to Premium",
+    "premSettings.upgradeDesc": "Unlock themes, perks, and exclusive features",
+  },
+  it: {
+    "app.name": "RADAR VIBE",
+    "app.tagline": "Mappa Sociale GPS",
+    "header.profile": "Profilo",
+    "header.createVibe": "Crea Vibe",
+    "header.premium": "Vai Premium",
+    "header.premiumBadge": "PREMIUM",
+    "header.messages": "Messaggi",
+    "search.placeholder": "Cerca vibes, persone, parole chiave...",
+    "map.nearYou": "Vicino a te",
+    "map.vibesNearby": "vibes vicini",
+    "map.usersNearby": "utenti vicini",
+    "map.legendFree": "Gratis",
+    "map.legendPremium": "Premium",
+    "vibe.live": "LIVE",
+    "vibe.planned": "PIANIFICATO",
+    "vibe.expiresIn": "Scade tra",
+    "vibe.create": "Crea Vibe",
+    "vibe.created": "Il tuo vibe è ora attivo!",
+    "vibe.title": "Titolo",
+    "vibe.titlePlaceholder": "es. Terrazza Relax, Serata Giochi...",
+    "vibe.description": "Descrizione",
+    "vibe.descPlaceholder": "Qual è il vibe?",
+    "vibe.type": "Tipo",
+    "vibe.photo": "Aggiungi Foto",
+    "vibe.schedule": "Programma",
+    "vibe.scheduled": "Programmato",
+    "vibe.premiumOnly": "Solo Premium",
+    "vibe.liveExpiry": "I vibes live scadono in {hours} ore",
+    "vibe.createdAgo": "Creato",
+    "vibe.messageCreator": "Messaggio al Creatore",
+    "profile.edit": "Modifica Profilo",
+    "profile.displayName": "Nome Visualizzato",
+    "profile.bio": "Bio",
+    "profile.bioPlaceholder": "Racconta qualcosa di te...",
+    "profile.socialLinks": "Link Social",
+    "profile.keywords": "Parole Chiave",
+    "profile.keywordsPlaceholder": "giochi, musica, libri... (separati da virgola)",
+    "profile.keywordsHint": "Usate per la ricerca Bussola di prossimità",
+    "profile.ghostMode": "Modalità Fantasma",
+    "profile.ghostDesc": "Naviga la mappa invisibile",
+    "profile.language": "Lingua",
+    "profile.logout": "Esci",
+    "profile.save": "Salva",
+    "profile.tapToChange": "Tocca per cambiare foto",
+    "profile.photoUpdated": "Foto aggiornata!",
+    "auth.login": "Accedi",
+    "auth.register": "Registrati",
+    "auth.username": "Nome utente",
+    "auth.password": "Password",
+    "auth.noAccount": "Non hai un account?",
+    "auth.hasAccount": "Hai già un account?",
+    "auth.welcome": "Benvenuto su Radar Vibe",
+    "auth.subtitle": "Scopri incontri in tempo reale vicino a te",
+    "msg.placeholder": "Scrivi un messaggio...",
+    "msg.send": "Invia",
+    "msg.limitReached": "Limite giornaliero raggiunto",
+    "msg.watchAd": "Guarda una pubblicità per 3 in più",
+    "msg.remaining": "messaggi rimanenti oggi",
+    "msg.unlimited": "Messaggi illimitati",
+    "msg.noConversations": "Nessuna conversazione",
+    "msg.startConversation": "Inizia la conversazione",
+    "premium.title": "VAI PREMIUM",
+    "premium.subtitle": "Sblocca l'esperienza completa",
+    "premium.monthly": "Mensile",
+    "premium.yearly": "Annuale",
+    "premium.perMonth": "/mese",
+    "premium.perYear": "/anno",
+    "premium.subscribe": "Abbonati Ora",
+    "premium.feature1": "Vedi TUTTI gli utenti sulla mappa",
+    "premium.feature2": "Messaggi illimitati",
+    "premium.feature3": "Zero pubblicità",
+    "premium.feature4": "Modalità Fantasma",
+    "premium.feature5": "Bussola di Prossimità",
+    "premium.feature6": "Pianifica vibes futuri",
+    "premium.save": "Risparmia 62%",
+    "ad.banner": "Spazio Pubblicitario",
+    "ad.interstitial": "Pubblicità",
+    "ad.continue": "Continua",
+    "ad.removePremium": "Vai Premium per rimuovere le pubblicità",
+    "ad.videoPlaceholder": "Caricamento video pubblicitario...",
+    "ad.wait": "Attendi",
+    "bussola.title": "Bussola",
+    "bussola.subtitle": "Trova persone per parola chiave",
+    "bussola.keyword": "Inserisci parola chiave",
+    "bussola.search": "Cerca vicino",
+    "bussola.found": "trovati entro 10km",
+    "bussola.noResults": "Nessun risultato vicino",
+    "common.close": "Chiudi",
+    "common.cancel": "Annulla",
+    "common.save": "Salva",
+    "common.delete": "Elimina",
+    "common.loading": "Caricamento...",
+    "common.error": "Qualcosa è andato storto",
+    "premSettings.title": "Impostazioni Premium",
+    "premSettings.theme": "Tema",
+    "premSettings.darkLuxury": "Lusso Scuro",
+    "premSettings.darkLuxuryDesc": "Sfondo nero con accenti dorati",
+    "premSettings.goldTheme": "Tema Oro",
+    "premSettings.goldThemeDesc": "Sfondo oro con testo nero",
+    "premSettings.custom": "Colori Personalizzati",
+    "premSettings.customDesc": "Scegli la tua palette di colori",
+    "premSettings.applyCustom": "Applica Tema Personalizzato",
+    "premSettings.primary": "Primario",
+    "premSettings.background": "Sfondo",
+    "premSettings.card": "Scheda",
+    "premSettings.accent": "Accento",
+    "premSettings.perks": "Vantaggi Premium",
+    "premSettings.exclusiveIcons": "Icone Mappa Esclusive",
+    "premSettings.exclusiveIconsDesc": "Cursori e marcatori personalizzati",
+    "premSettings.vipBadge": "Badge VIP Profilo",
+    "premSettings.vipBadgeDesc": "Icona VIP accanto al nome utente",
+    "premSettings.extendedRadar": "Raggio Radar Esteso",
+    "premSettings.extendedRadarDesc": "Vista e filtro potenziati sulla mappa",
+    "premSettings.priorityVisibility": "Visibilità Prioritaria",
+    "premSettings.priorityVisibilityDesc": "Appari per primo nei risultati Bussola",
+    "premSettings.comingSoon": "In Arrivo",
+    "premSettings.active": "Attivo",
+    "premSettings.upgrade": "Passa a Premium",
+    "premSettings.upgradeDesc": "Sblocca temi, vantaggi e funzionalità esclusive",
+  },
+  fr: {
+    "app.name": "RADAR VIBE",
+    "app.tagline": "Carte Sociale GPS",
+    "header.profile": "Profil",
+    "header.createVibe": "Créer Vibe",
+    "header.premium": "Passer Premium",
+    "header.premiumBadge": "PREMIUM",
+    "header.messages": "Messages",
+    "search.placeholder": "Rechercher vibes, personnes, mots-clés...",
+    "map.nearYou": "Près de vous",
+    "map.vibesNearby": "vibes à proximité",
+    "map.usersNearby": "utilisateurs à proximité",
+    "map.legendFree": "Gratuit",
+    "map.legendPremium": "Premium",
+    "vibe.live": "EN DIRECT",
+    "vibe.planned": "PLANIFIÉ",
+    "vibe.expiresIn": "Expire dans",
+    "vibe.create": "Créer Vibe",
+    "vibe.created": "Votre vibe est maintenant en ligne !",
+    "vibe.title": "Titre",
+    "vibe.titlePlaceholder": "ex. Soirée Toit, Nuit de Jeux...",
+    "vibe.description": "Description",
+    "vibe.descPlaceholder": "Quel est le vibe ?",
+    "vibe.type": "Type",
+    "vibe.photo": "Ajouter Photo",
+    "vibe.schedule": "Planifier",
+    "vibe.scheduled": "Planifié",
+    "vibe.premiumOnly": "Premium Uniquement",
+    "vibe.liveExpiry": "Les vibes en direct expirent en {hours} heures",
+    "vibe.createdAgo": "Créé",
+    "vibe.messageCreator": "Contacter le Créateur",
+    "profile.edit": "Modifier le Profil",
+    "profile.displayName": "Nom d'affichage",
+    "profile.bio": "Bio",
+    "profile.bioPlaceholder": "Parlez de vous...",
+    "profile.socialLinks": "Liens Sociaux",
+    "profile.keywords": "Mots-clés",
+    "profile.keywordsPlaceholder": "jeux, musique, livres... (séparés par virgule)",
+    "profile.keywordsHint": "Utilisés pour la recherche Boussole de proximité",
+    "profile.ghostMode": "Mode Fantôme",
+    "profile.ghostDesc": "Naviguer la carte invisiblement",
+    "profile.language": "Langue",
+    "profile.logout": "Déconnexion",
+    "profile.save": "Enregistrer",
+    "profile.tapToChange": "Toucher pour changer la photo",
+    "profile.photoUpdated": "Photo mise à jour !",
+    "auth.login": "Se Connecter",
+    "auth.register": "S'inscrire",
+    "auth.username": "Nom d'utilisateur",
+    "auth.password": "Mot de passe",
+    "auth.noAccount": "Pas de compte ?",
+    "auth.hasAccount": "Déjà un compte ?",
+    "auth.welcome": "Bienvenue sur Radar Vibe",
+    "auth.subtitle": "Découvrez des rencontres en temps réel près de vous",
+    "msg.placeholder": "Tapez un message...",
+    "msg.send": "Envoyer",
+    "msg.limitReached": "Limite quotidienne atteinte",
+    "msg.watchAd": "Regardez une pub pour 3 de plus",
+    "msg.remaining": "messages restants aujourd'hui",
+    "msg.unlimited": "Messages illimités",
+    "msg.noConversations": "Aucune conversation",
+    "msg.startConversation": "Commencer la conversation",
+    "premium.title": "PASSER PREMIUM",
+    "premium.subtitle": "Débloquez l'expérience complète",
+    "premium.monthly": "Mensuel",
+    "premium.yearly": "Annuel",
+    "premium.perMonth": "/mois",
+    "premium.perYear": "/an",
+    "premium.subscribe": "S'abonner",
+    "premium.feature1": "Voir TOUS les utilisateurs",
+    "premium.feature2": "Messages illimités",
+    "premium.feature3": "Zéro pub",
+    "premium.feature4": "Mode Fantôme",
+    "premium.feature5": "Boussole de Proximité",
+    "premium.feature6": "Planifier des vibes futurs",
+    "premium.save": "Économisez 62%",
+    "ad.banner": "Espace Publicitaire",
+    "ad.interstitial": "Publicité",
+    "ad.continue": "Continuer",
+    "ad.removePremium": "Passez Premium pour supprimer les pubs",
+    "ad.videoPlaceholder": "Chargement vidéo publicitaire...",
+    "ad.wait": "Patientez",
+    "bussola.title": "Boussole",
+    "bussola.subtitle": "Trouver des personnes par mot-clé",
+    "bussola.keyword": "Entrez un mot-clé",
+    "bussola.search": "Chercher à proximité",
+    "bussola.found": "trouvés dans 10km",
+    "bussola.noResults": "Aucun résultat à proximité",
+    "common.close": "Fermer",
+    "common.cancel": "Annuler",
+    "common.save": "Enregistrer",
+    "common.delete": "Supprimer",
+    "common.loading": "Chargement...",
+    "common.error": "Quelque chose s'est mal passé",
+    "premSettings.title": "Paramètres Premium",
+    "premSettings.theme": "Thème",
+    "premSettings.darkLuxury": "Luxe Sombre",
+    "premSettings.darkLuxuryDesc": "Fond noir avec accents dorés",
+    "premSettings.goldTheme": "Thème Or",
+    "premSettings.goldThemeDesc": "Fond doré avec texte noir",
+    "premSettings.custom": "Couleurs Personnalisées",
+    "premSettings.customDesc": "Choisissez votre palette",
+    "premSettings.applyCustom": "Appliquer le Thème",
+    "premSettings.primary": "Principal",
+    "premSettings.background": "Fond",
+    "premSettings.card": "Carte",
+    "premSettings.accent": "Accent",
+    "premSettings.perks": "Avantages Premium",
+    "premSettings.exclusiveIcons": "Icônes de Carte Exclusives",
+    "premSettings.exclusiveIconsDesc": "Curseurs et marqueurs personnalisés",
+    "premSettings.vipBadge": "Badge VIP Profil",
+    "premSettings.vipBadgeDesc": "Icône VIP à côté du nom",
+    "premSettings.extendedRadar": "Portée Radar Étendue",
+    "premSettings.extendedRadarDesc": "Vue et filtre améliorés",
+    "premSettings.priorityVisibility": "Visibilité Prioritaire",
+    "premSettings.priorityVisibilityDesc": "Apparaître en premier dans Boussole",
+    "premSettings.comingSoon": "Bientôt",
+    "premSettings.active": "Actif",
+    "premSettings.upgrade": "Passer Premium",
+    "premSettings.upgradeDesc": "Débloquez thèmes, avantages et fonctionnalités",
+  },
+  de: {
+    "app.name": "RADAR VIBE",
+    "app.tagline": "GPS Soziale Karte",
+    "header.profile": "Profil",
+    "header.createVibe": "Vibe erstellen",
+    "header.premium": "Premium werden",
+    "header.premiumBadge": "PREMIUM",
+    "header.messages": "Nachrichten",
+    "search.placeholder": "Vibes, Personen, Schlüsselwörter suchen...",
+    "map.nearYou": "In deiner Nähe",
+    "map.vibesNearby": "Vibes in der Nähe",
+    "map.usersNearby": "Benutzer in der Nähe",
+    "map.legendFree": "Kostenlos",
+    "map.legendPremium": "Premium",
+    "vibe.live": "LIVE",
+    "vibe.planned": "GEPLANT",
+    "vibe.expiresIn": "Läuft ab in",
+    "vibe.create": "Vibe erstellen",
+    "vibe.created": "Dein Vibe ist jetzt aktiv!",
+    "vibe.title": "Titel",
+    "vibe.titlePlaceholder": "z.B. Dach-Chill, Spieleabend...",
+    "vibe.description": "Beschreibung",
+    "vibe.descPlaceholder": "Was ist der Vibe?",
+    "vibe.type": "Typ",
+    "vibe.photo": "Foto hinzufügen",
+    "vibe.schedule": "Planen",
+    "vibe.scheduled": "Geplant",
+    "vibe.premiumOnly": "Nur Premium",
+    "vibe.liveExpiry": "Live Vibes laufen in {hours} Stunden ab",
+    "vibe.createdAgo": "Erstellt",
+    "vibe.messageCreator": "Ersteller kontaktieren",
+    "profile.edit": "Profil bearbeiten",
+    "profile.displayName": "Anzeigename",
+    "profile.bio": "Bio",
+    "profile.bioPlaceholder": "Erzähle etwas über dich...",
+    "profile.socialLinks": "Soziale Links",
+    "profile.keywords": "Schlüsselwörter",
+    "profile.keywordsPlaceholder": "Gaming, Musik, Bücher... (kommagetrennt)",
+    "profile.keywordsHint": "Für Kompass-Näherungssuche verwendet",
+    "profile.ghostMode": "Geistermodus",
+    "profile.ghostDesc": "Unsichtbar auf der Karte",
+    "profile.language": "Sprache",
+    "profile.logout": "Abmelden",
+    "profile.save": "Speichern",
+    "profile.tapToChange": "Tippen um Foto zu ändern",
+    "profile.photoUpdated": "Foto aktualisiert!",
+    "auth.login": "Anmelden",
+    "auth.register": "Registrieren",
+    "auth.username": "Benutzername",
+    "auth.password": "Passwort",
+    "auth.noAccount": "Kein Konto?",
+    "auth.hasAccount": "Bereits ein Konto?",
+    "auth.welcome": "Willkommen bei Radar Vibe",
+    "auth.subtitle": "Entdecke Echtzeit-Treffen in deiner Nähe",
+    "msg.placeholder": "Nachricht eingeben...",
+    "msg.send": "Senden",
+    "msg.limitReached": "Tageslimit erreicht",
+    "msg.watchAd": "Werbung ansehen für 3 mehr",
+    "msg.remaining": "Nachrichten heute übrig",
+    "msg.unlimited": "Unbegrenzte Nachrichten",
+    "msg.noConversations": "Keine Unterhaltungen",
+    "msg.startConversation": "Unterhaltung starten",
+    "premium.title": "PREMIUM WERDEN",
+    "premium.subtitle": "Schalte das volle Erlebnis frei",
+    "premium.monthly": "Monatlich",
+    "premium.yearly": "Jährlich",
+    "premium.perMonth": "/Monat",
+    "premium.perYear": "/Jahr",
+    "premium.subscribe": "Jetzt abonnieren",
+    "premium.feature1": "ALLE Benutzer sehen",
+    "premium.feature2": "Unbegrenzte Nachrichten",
+    "premium.feature3": "Keine Werbung",
+    "premium.feature4": "Geistermodus",
+    "premium.feature5": "Näherungskompass",
+    "premium.feature6": "Zukünftige Vibes planen",
+    "premium.save": "62% sparen",
+    "ad.banner": "Werbeplatz",
+    "ad.interstitial": "Werbung",
+    "ad.continue": "Weiter",
+    "ad.removePremium": "Premium für werbefreies Erlebnis",
+    "ad.videoPlaceholder": "Werbevideo wird geladen...",
+    "ad.wait": "Warten",
+    "bussola.title": "Kompass",
+    "bussola.subtitle": "Personen nach Stichwort finden",
+    "bussola.keyword": "Stichwort eingeben",
+    "bussola.search": "In der Nähe suchen",
+    "bussola.found": "innerhalb 10km gefunden",
+    "bussola.noResults": "Keine Treffer in der Nähe",
+    "common.close": "Schließen",
+    "common.cancel": "Abbrechen",
+    "common.save": "Speichern",
+    "common.delete": "Löschen",
+    "common.loading": "Laden...",
+    "common.error": "Etwas ist schief gelaufen",
+    "premSettings.title": "Premium-Einstellungen",
+    "premSettings.theme": "Design",
+    "premSettings.darkLuxury": "Dunkler Luxus",
+    "premSettings.darkLuxuryDesc": "Schwarzer Hintergrund mit Gold-Akzenten",
+    "premSettings.goldTheme": "Gold-Design",
+    "premSettings.goldThemeDesc": "Goldener Hintergrund mit schwarzem Text",
+    "premSettings.custom": "Eigene Farben",
+    "premSettings.customDesc": "Wähle deine eigene Farbpalette",
+    "premSettings.applyCustom": "Design anwenden",
+    "premSettings.primary": "Primär",
+    "premSettings.background": "Hintergrund",
+    "premSettings.card": "Karte",
+    "premSettings.accent": "Akzent",
+    "premSettings.perks": "Premium-Vorteile",
+    "premSettings.exclusiveIcons": "Exklusive Karten-Symbole",
+    "premSettings.exclusiveIconsDesc": "Eigene Cursor und Markierungen",
+    "premSettings.vipBadge": "VIP-Abzeichen",
+    "premSettings.vipBadgeDesc": "VIP-Symbol neben dem Benutzernamen",
+    "premSettings.extendedRadar": "Erweiterte Reichweite",
+    "premSettings.extendedRadarDesc": "Verbesserte Ansicht und Filter",
+    "premSettings.priorityVisibility": "Prioritäts-Sichtbarkeit",
+    "premSettings.priorityVisibilityDesc": "Zuerst in Kompass-Ergebnissen",
+    "premSettings.comingSoon": "Demnächst",
+    "premSettings.active": "Aktiv",
+    "premSettings.upgrade": "Premium werden",
+    "premSettings.upgradeDesc": "Designs, Vorteile und exklusive Funktionen",
+  },
+  es: {
+    "app.name": "RADAR VIBE",
+    "app.tagline": "Mapa Social GPS",
+    "header.profile": "Perfil",
+    "header.createVibe": "Crear Vibe",
+    "header.premium": "Ser Premium",
+    "header.premiumBadge": "PREMIUM",
+    "header.messages": "Mensajes",
+    "search.placeholder": "Buscar vibes, personas, palabras clave...",
+    "map.nearYou": "Cerca de ti",
+    "map.vibesNearby": "vibes cercanos",
+    "map.usersNearby": "usuarios cercanos",
+    "map.legendFree": "Gratis",
+    "map.legendPremium": "Premium",
+    "vibe.live": "EN VIVO",
+    "vibe.planned": "PLANIFICADO",
+    "vibe.expiresIn": "Expira en",
+    "vibe.create": "Crear Vibe",
+    "vibe.created": "¡Tu vibe está ahora en vivo!",
+    "vibe.title": "Título",
+    "vibe.titlePlaceholder": "ej. Terraza Relax, Noche de Juegos...",
+    "vibe.description": "Descripción",
+    "vibe.descPlaceholder": "¿Cuál es el vibe?",
+    "vibe.type": "Tipo",
+    "vibe.photo": "Añadir Foto",
+    "vibe.schedule": "Programar",
+    "vibe.scheduled": "Programado",
+    "vibe.premiumOnly": "Solo Premium",
+    "vibe.liveExpiry": "Los vibes en vivo expiran en {hours} horas",
+    "vibe.createdAgo": "Creado",
+    "vibe.messageCreator": "Mensaje al Creador",
+    "profile.edit": "Editar Perfil",
+    "profile.displayName": "Nombre para Mostrar",
+    "profile.bio": "Bio",
+    "profile.bioPlaceholder": "Cuenta algo de ti...",
+    "profile.socialLinks": "Enlaces Sociales",
+    "profile.keywords": "Palabras Clave",
+    "profile.keywordsPlaceholder": "juegos, música, libros... (separados por coma)",
+    "profile.keywordsHint": "Usadas para búsqueda de proximidad Brújula",
+    "profile.ghostMode": "Modo Fantasma",
+    "profile.ghostDesc": "Navegar el mapa de forma invisible",
+    "profile.language": "Idioma",
+    "profile.logout": "Cerrar sesión",
+    "profile.save": "Guardar",
+    "profile.tapToChange": "Toca para cambiar foto",
+    "profile.photoUpdated": "¡Foto actualizada!",
+    "auth.login": "Iniciar Sesión",
+    "auth.register": "Registrarse",
+    "auth.username": "Nombre de usuario",
+    "auth.password": "Contraseña",
+    "auth.noAccount": "¿No tienes cuenta?",
+    "auth.hasAccount": "¿Ya tienes cuenta?",
+    "auth.welcome": "Bienvenido a Radar Vibe",
+    "auth.subtitle": "Descubre encuentros en tiempo real cerca de ti",
+    "msg.placeholder": "Escribe un mensaje...",
+    "msg.send": "Enviar",
+    "msg.limitReached": "Límite diario alcanzado",
+    "msg.watchAd": "Ver anuncio para 3 más",
+    "msg.remaining": "mensajes restantes hoy",
+    "msg.unlimited": "Mensajes ilimitados",
+    "msg.noConversations": "Sin conversaciones",
+    "msg.startConversation": "Iniciar la conversación",
+    "premium.title": "SER PREMIUM",
+    "premium.subtitle": "Desbloquea la experiencia completa",
+    "premium.monthly": "Mensual",
+    "premium.yearly": "Anual",
+    "premium.perMonth": "/mes",
+    "premium.perYear": "/año",
+    "premium.subscribe": "Suscríbete Ahora",
+    "premium.feature1": "Ver TODOS los usuarios",
+    "premium.feature2": "Mensajes ilimitados",
+    "premium.feature3": "Cero anuncios",
+    "premium.feature4": "Modo Fantasma",
+    "premium.feature5": "Brújula de Proximidad",
+    "premium.feature6": "Planificar vibes futuros",
+    "premium.save": "Ahorra 62%",
+    "ad.banner": "Espacio Publicitario",
+    "ad.interstitial": "Publicidad",
+    "ad.continue": "Continuar",
+    "ad.removePremium": "Sé Premium para quitar anuncios",
+    "ad.videoPlaceholder": "Cargando video publicitario...",
+    "ad.wait": "Espera",
+    "bussola.title": "Brújula",
+    "bussola.subtitle": "Buscar personas por palabra clave",
+    "bussola.keyword": "Ingresa palabra clave",
+    "bussola.search": "Buscar cercanos",
+    "bussola.found": "encontrados en 10km",
+    "bussola.noResults": "Sin resultados cercanos",
+    "common.close": "Cerrar",
+    "common.cancel": "Cancelar",
+    "common.save": "Guardar",
+    "common.delete": "Eliminar",
+    "common.loading": "Cargando...",
+    "common.error": "Algo salió mal",
+    "premSettings.title": "Configuración Premium",
+    "premSettings.theme": "Tema",
+    "premSettings.darkLuxury": "Lujo Oscuro",
+    "premSettings.darkLuxuryDesc": "Fondo negro con acentos dorados",
+    "premSettings.goldTheme": "Tema Dorado",
+    "premSettings.goldThemeDesc": "Fondo dorado con texto negro",
+    "premSettings.custom": "Colores Personalizados",
+    "premSettings.customDesc": "Elige tu paleta de colores",
+    "premSettings.applyCustom": "Aplicar Tema",
+    "premSettings.primary": "Principal",
+    "premSettings.background": "Fondo",
+    "premSettings.card": "Tarjeta",
+    "premSettings.accent": "Acento",
+    "premSettings.perks": "Beneficios Premium",
+    "premSettings.exclusiveIcons": "Iconos de Mapa Exclusivos",
+    "premSettings.exclusiveIconsDesc": "Cursores y marcadores personalizados",
+    "premSettings.vipBadge": "Insignia VIP",
+    "premSettings.vipBadgeDesc": "Icono VIP junto al nombre",
+    "premSettings.extendedRadar": "Alcance Radar Extendido",
+    "premSettings.extendedRadarDesc": "Vista y filtro mejorados",
+    "premSettings.priorityVisibility": "Visibilidad Prioritaria",
+    "premSettings.priorityVisibilityDesc": "Aparecer primero en Brújula",
+    "premSettings.comingSoon": "Próximamente",
+    "premSettings.active": "Activo",
+    "premSettings.upgrade": "Ser Premium",
+    "premSettings.upgradeDesc": "Desbloquea temas, beneficios y funciones exclusivas",
+  },
+  pt: {
+    "app.name": "RADAR VIBE",
+    "app.tagline": "Mapa Social GPS",
+    "header.profile": "Perfil",
+    "header.createVibe": "Criar Vibe",
+    "header.premium": "Ser Premium",
+    "header.premiumBadge": "PREMIUM",
+    "header.messages": "Mensagens",
+    "search.placeholder": "Buscar vibes, pessoas, palavras-chave...",
+    "map.nearYou": "Perto de você",
+    "map.vibesNearby": "vibes próximos",
+    "map.usersNearby": "usuários próximos",
+    "map.legendFree": "Grátis",
+    "map.legendPremium": "Premium",
+    "vibe.live": "AO VIVO",
+    "vibe.planned": "PLANEJADO",
+    "vibe.expiresIn": "Expira em",
+    "vibe.create": "Criar Vibe",
+    "vibe.created": "Seu vibe está agora ativo!",
+    "vibe.title": "Título",
+    "vibe.titlePlaceholder": "ex. Terraço Relax, Noite de Jogos...",
+    "vibe.description": "Descrição",
+    "vibe.descPlaceholder": "Qual é o vibe?",
+    "vibe.type": "Tipo",
+    "vibe.photo": "Adicionar Foto",
+    "vibe.schedule": "Agendar",
+    "vibe.scheduled": "Agendado",
+    "vibe.premiumOnly": "Apenas Premium",
+    "vibe.liveExpiry": "Vibes ao vivo expiram em {hours} horas",
+    "vibe.createdAgo": "Criado",
+    "vibe.messageCreator": "Mensagem ao Criador",
+    "profile.edit": "Editar Perfil",
+    "profile.displayName": "Nome de Exibição",
+    "profile.bio": "Bio",
+    "profile.bioPlaceholder": "Conte sobre você...",
+    "profile.socialLinks": "Links Sociais",
+    "profile.keywords": "Palavras-chave",
+    "profile.keywordsPlaceholder": "jogos, música, livros... (separados por vírgula)",
+    "profile.keywordsHint": "Usadas para busca de proximidade Bússola",
+    "profile.ghostMode": "Modo Fantasma",
+    "profile.ghostDesc": "Navegar o mapa invisivelmente",
+    "profile.language": "Idioma",
+    "profile.logout": "Sair",
+    "profile.save": "Salvar",
+    "profile.tapToChange": "Toque para mudar foto",
+    "profile.photoUpdated": "Foto atualizada!",
+    "auth.login": "Entrar",
+    "auth.register": "Cadastrar",
+    "auth.username": "Nome de usuário",
+    "auth.password": "Senha",
+    "auth.noAccount": "Não tem conta?",
+    "auth.hasAccount": "Já tem conta?",
+    "auth.welcome": "Bem-vindo ao Radar Vibe",
+    "auth.subtitle": "Descubra encontros em tempo real perto de você",
+    "msg.placeholder": "Digite uma mensagem...",
+    "msg.send": "Enviar",
+    "msg.limitReached": "Limite diário atingido",
+    "msg.watchAd": "Assista um anúncio para mais 3",
+    "msg.remaining": "mensagens restantes hoje",
+    "msg.unlimited": "Mensagens ilimitadas",
+    "msg.noConversations": "Sem conversas",
+    "msg.startConversation": "Iniciar a conversa",
+    "premium.title": "SER PREMIUM",
+    "premium.subtitle": "Desbloqueie a experiência completa",
+    "premium.monthly": "Mensal",
+    "premium.yearly": "Anual",
+    "premium.perMonth": "/mês",
+    "premium.perYear": "/ano",
+    "premium.subscribe": "Assinar Agora",
+    "premium.feature1": "Veja TODOS os usuários",
+    "premium.feature2": "Mensagens ilimitadas",
+    "premium.feature3": "Zero anúncios",
+    "premium.feature4": "Modo Fantasma",
+    "premium.feature5": "Bússola de Proximidade",
+    "premium.feature6": "Planeje vibes futuros",
+    "premium.save": "Economize 62%",
+    "ad.banner": "Espaço Publicitário",
+    "ad.interstitial": "Publicidade",
+    "ad.continue": "Continuar",
+    "ad.removePremium": "Seja Premium para remover anúncios",
+    "ad.videoPlaceholder": "Carregando vídeo publicitário...",
+    "ad.wait": "Aguarde",
+    "bussola.title": "Bússola",
+    "bussola.subtitle": "Encontrar pessoas por palavra-chave",
+    "bussola.keyword": "Digite palavra-chave",
+    "bussola.search": "Buscar próximos",
+    "bussola.found": "encontrados em 10km",
+    "bussola.noResults": "Nenhum resultado próximo",
+    "common.close": "Fechar",
+    "common.cancel": "Cancelar",
+    "common.save": "Salvar",
+    "common.delete": "Excluir",
+    "common.loading": "Carregando...",
+    "common.error": "Algo deu errado",
+    "premSettings.title": "Configurações Premium",
+    "premSettings.theme": "Tema",
+    "premSettings.darkLuxury": "Luxo Escuro",
+    "premSettings.darkLuxuryDesc": "Fundo preto com detalhes dourados",
+    "premSettings.goldTheme": "Tema Dourado",
+    "premSettings.goldThemeDesc": "Fundo dourado com texto preto",
+    "premSettings.custom": "Cores Personalizadas",
+    "premSettings.customDesc": "Escolha sua paleta de cores",
+    "premSettings.applyCustom": "Aplicar Tema",
+    "premSettings.primary": "Principal",
+    "premSettings.background": "Fundo",
+    "premSettings.card": "Cartão",
+    "premSettings.accent": "Destaque",
+    "premSettings.perks": "Benefícios Premium",
+    "premSettings.exclusiveIcons": "Ícones de Mapa Exclusivos",
+    "premSettings.exclusiveIconsDesc": "Cursores e marcadores personalizados",
+    "premSettings.vipBadge": "Selo VIP",
+    "premSettings.vipBadgeDesc": "Ícone VIP ao lado do nome",
+    "premSettings.extendedRadar": "Alcance Radar Estendido",
+    "premSettings.extendedRadarDesc": "Vista e filtro aprimorados",
+    "premSettings.priorityVisibility": "Visibilidade Prioritária",
+    "premSettings.priorityVisibilityDesc": "Aparecer primeiro na Bússola",
+    "premSettings.comingSoon": "Em Breve",
+    "premSettings.active": "Ativo",
+    "premSettings.upgrade": "Ser Premium",
+    "premSettings.upgradeDesc": "Desbloqueie temas, benefícios e recursos exclusivos",
+  },
+  sv: {
+    "app.name": "RADAR VIBE",
+    "app.tagline": "GPS Social Karta",
+    "header.profile": "Profil",
+    "header.createVibe": "Skapa Vibe",
+    "header.premium": "Bli Premium",
+    "header.premiumBadge": "PREMIUM",
+    "header.messages": "Meddelanden",
+    "search.placeholder": "Sök vibes, personer, nyckelord...",
+    "map.nearYou": "Nära dig",
+    "map.vibesNearby": "vibes i närheten",
+    "map.usersNearby": "användare i närheten",
+    "map.legendFree": "Gratis",
+    "map.legendPremium": "Premium",
+    "vibe.live": "LIVE",
+    "vibe.planned": "PLANERAD",
+    "vibe.expiresIn": "Går ut om",
+    "vibe.create": "Skapa Vibe",
+    "vibe.created": "Din vibe är nu aktiv!",
+    "vibe.title": "Titel",
+    "vibe.titlePlaceholder": "t.ex. Takterrass, Spelkväll...",
+    "vibe.description": "Beskrivning",
+    "vibe.descPlaceholder": "Vad är viben?",
+    "vibe.type": "Typ",
+    "vibe.photo": "Lägg till Foto",
+    "vibe.schedule": "Schemalägg",
+    "vibe.scheduled": "Schemalagd",
+    "vibe.premiumOnly": "Endast Premium",
+    "vibe.liveExpiry": "Live vibes går ut om {hours} timmar",
+    "vibe.createdAgo": "Skapad",
+    "vibe.messageCreator": "Meddelande till Skaparen",
+    "profile.edit": "Redigera Profil",
+    "profile.displayName": "Visningsnamn",
+    "profile.bio": "Bio",
+    "profile.bioPlaceholder": "Berätta om dig själv...",
+    "profile.socialLinks": "Sociala Länkar",
+    "profile.keywords": "Nyckelord",
+    "profile.keywordsPlaceholder": "spel, musik, böcker... (kommaseparerat)",
+    "profile.keywordsHint": "Används för Kompass närhetssökning",
+    "profile.ghostMode": "Spökläge",
+    "profile.ghostDesc": "Surfa på kartan osynligt",
+    "profile.language": "Språk",
+    "profile.logout": "Logga ut",
+    "profile.save": "Spara",
+    "profile.tapToChange": "Tryck för att byta foto",
+    "profile.photoUpdated": "Foto uppdaterat!",
+    "auth.login": "Logga in",
+    "auth.register": "Registrera",
+    "auth.username": "Användarnamn",
+    "auth.password": "Lösenord",
+    "auth.noAccount": "Inget konto?",
+    "auth.hasAccount": "Har du redan ett konto?",
+    "auth.welcome": "Välkommen till Radar Vibe",
+    "auth.subtitle": "Upptäck möten i realtid nära dig",
+    "msg.placeholder": "Skriv ett meddelande...",
+    "msg.send": "Skicka",
+    "msg.limitReached": "Daglig gräns nådd",
+    "msg.watchAd": "Se reklam för 3 till",
+    "msg.remaining": "meddelanden kvar idag",
+    "msg.unlimited": "Obegränsade meddelanden",
+    "msg.noConversations": "Inga konversationer",
+    "msg.startConversation": "Starta konversationen",
+    "premium.title": "BLI PREMIUM",
+    "premium.subtitle": "Lås upp hela upplevelsen",
+    "premium.monthly": "Månadsvis",
+    "premium.yearly": "Årsvis",
+    "premium.perMonth": "/månad",
+    "premium.perYear": "/år",
+    "premium.subscribe": "Prenumerera Nu",
+    "premium.feature1": "Se ALLA användare",
+    "premium.feature2": "Obegränsade meddelanden",
+    "premium.feature3": "Ingen reklam",
+    "premium.feature4": "Spökläge",
+    "premium.feature5": "Närhetskompass",
+    "premium.feature6": "Planera framtida vibes",
+    "premium.save": "Spara 62%",
+    "ad.banner": "Reklamplats",
+    "ad.interstitial": "Reklam",
+    "ad.continue": "Fortsätt",
+    "ad.removePremium": "Bli Premium för reklamfritt",
+    "ad.videoPlaceholder": "Laddar reklamvideo...",
+    "ad.wait": "Vänta",
+    "bussola.title": "Kompass",
+    "bussola.subtitle": "Hitta personer efter nyckelord",
+    "bussola.keyword": "Ange nyckelord",
+    "bussola.search": "Sök i närheten",
+    "bussola.found": "hittade inom 10km",
+    "bussola.noResults": "Inga träffar i närheten",
+    "common.close": "Stäng",
+    "common.cancel": "Avbryt",
+    "common.save": "Spara",
+    "common.delete": "Radera",
+    "common.loading": "Laddar...",
+    "common.error": "Något gick fel",
+    "premSettings.title": "Premium-inställningar",
+    "premSettings.theme": "Tema",
+    "premSettings.darkLuxury": "Mörk Lyx",
+    "premSettings.darkLuxuryDesc": "Svart bakgrund med guldaccenter",
+    "premSettings.goldTheme": "Guldtema",
+    "premSettings.goldThemeDesc": "Guldbakgrund med svart text",
+    "premSettings.custom": "Egna Färger",
+    "premSettings.customDesc": "Välj din egen färgpalett",
+    "premSettings.applyCustom": "Tillämpa Tema",
+    "premSettings.primary": "Primär",
+    "premSettings.background": "Bakgrund",
+    "premSettings.card": "Kort",
+    "premSettings.accent": "Accent",
+    "premSettings.perks": "Premium-förmåner",
+    "premSettings.exclusiveIcons": "Exklusiva Kartikoner",
+    "premSettings.exclusiveIconsDesc": "Egna markörer och pekare",
+    "premSettings.vipBadge": "VIP-märke",
+    "premSettings.vipBadgeDesc": "VIP-ikon bredvid användarnamnet",
+    "premSettings.extendedRadar": "Utökad Radarräckvidd",
+    "premSettings.extendedRadarDesc": "Förbättrad vy och filter",
+    "premSettings.priorityVisibility": "Prioriterad Synlighet",
+    "premSettings.priorityVisibilityDesc": "Visas först i Kompass-resultat",
+    "premSettings.comingSoon": "Kommer Snart",
+    "premSettings.active": "Aktiv",
+    "premSettings.upgrade": "Bli Premium",
+    "premSettings.upgradeDesc": "Lås upp teman, förmåner och exklusiva funktioner",
+  },
+};
 
-/* Fallback for older browsers */
-  --sidebar-primary-border: hsl(var(--sidebar-primary));
-  --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+const LANG_KEY = "radarvibe_language";
 
-  /* Fallback for older browsers */
-  --sidebar-accent-border: hsl(var(--sidebar-accent));
-  --sidebar-accent-border: hsl(from hsl(var(--sidebar-accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+let globalLang = localStorage.getItem(LANG_KEY) || "en";
+const listeners = new Set<() => void>();
 
-  /* Fallback for older browsers */
-  --primary-border: hsl(var(--primary));
-  --primary-border: hsl(from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --secondary-border: hsl(var(--secondary));
-  --secondary-border: hsl(from hsl(var(--secondary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --muted-border: hsl(var(--muted));
-  --muted-border: hsl(from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --accent-border: hsl(var(--accent));
-  --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --destructive-border: hsl(var(--destructive));
-  --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+function getSnapshot() {
+  return globalLang;
 }
 
-.dark {
-  --button-outline: rgba(255,255,255, .10);
-  --badge-outline: rgba(255,255,255, .05);
-  --opaque-button-border-intensity: 9;
-  --elevate-1: rgba(255,255,255, .04);
-  --elevate-2: rgba(255,255,255, .09);
-  --background: 0 0% 4%;
-  --foreground: 43 30% 75%;
-  --border: 0 0% 14%;
-  --card: 0 0% 7%;
-  --card-foreground: 43 30% 75%;
-  --card-border: 0 0% 12%;
-  --sidebar: 0 0% 5%;
-  --sidebar-foreground: 43 30% 75%;
-  --sidebar-border: 0 0% 12%;
-  --sidebar-primary: 43 74% 49%;
-  --sidebar-primary-foreground: 0 0% 4%;
-  --sidebar-accent: 43 15% 12%;
-  --sidebar-accent-foreground: 43 30% 80%;
-  --sidebar-ring: 43 74% 49%;
-  --popover: 0 0% 8%;
-  --popover-foreground: 43 30% 75%;
-  --popover-border: 0 0% 15%;
-  --primary: 43 74% 49%;
-  --primary-foreground: 0 0% 4%;
-  --secondary: 43 10% 14%;
-  --secondary-foreground: 43 30% 80%;
-  --muted: 43 5% 12%;
-  --muted-foreground: 43 10% 50%;
-  --accent: 43 15% 12%;
-  --accent-foreground: 43 30% 80%;
-  --destructive: 0 84% 40%;
-  --destructive-foreground: 0 0% 98%;
-  --input: 0 0% 25%;
-  --ring: 43 74% 49%;
-  --chart-1: 43 74% 49%;
-  --chart-2: 30 68% 50%;
-  --chart-3: 20 65% 48%;
-  --chart-4: 10 70% 45%;
-  --chart-5: 0 75% 42%;
-  --shadow-2xs: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
-  --shadow-xs: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
-  --shadow-sm: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 1px 2px -1px hsl(0 0% 0% / 0.00);
-  --shadow: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 1px 2px -1px hsl(0 0% 0% / 0.00);
-  --shadow-md: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 2px 4px -1px hsl(0 0% 0% / 0.00);
-  --shadow-lg: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 4px 6px -1px hsl(0 0% 0% / 0.00);
-  --shadow-xl: 0px 2px 0px 0px hsl(0 0% 0% / 0.00), 0px 8px 10px -1px hsl(0 0% 0% / 0.00);
-  --shadow-2xl: 0px 2px 0px 0px hsl(0 0% 0% / 0.00);
-
-/* Fallback for older browsers */
-  --sidebar-primary-border: hsl(var(--sidebar-primary));
-  --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --sidebar-accent-border: hsl(var(--sidebar-accent));
-  --sidebar-accent-border: hsl(from hsl(var(--sidebar-accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --primary-border: hsl(var(--primary));
-  --primary-border: hsl(from hsl(var(--primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --secondary-border: hsl(var(--secondary));
-  --secondary-border: hsl(from hsl(var(--secondary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --muted-border: hsl(var(--muted));
-  --muted-border: hsl(from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --accent-border: hsl(var(--accent));
-  --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
-
-  /* Fallback for older browsers */
-  --destructive-border: hsl(var(--destructive));
-  --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply font-sans antialiased bg-background text-foreground;
-  }
+function setGlobalLang(newLang: string) {
+  globalLang = newLang;
+  localStorage.setItem(LANG_KEY, newLang);
+  listeners.forEach((l) => l());
 }
 
-.leaflet-container {
-  z-index: 1 !important;
-}
-.leaflet-pane {
-  z-index: 1 !important;
-}
-.leaflet-top,
-.leaflet-bottom {
-  z-index: 2 !important;
-}
-.leaflet-control {
-  z-index: 2 !important;
-}
+export function useTranslation() {
+  const lang = useSyncExternalStore(subscribe, getSnapshot);
 
-@keyframes modalOverlayIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-@keyframes modalOverlayOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-@keyframes modalContentIn {
-  from { opacity: 0; transform: scale(0.95) translateY(10px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-@keyframes modalContentOut {
-  from { opacity: 1; transform: scale(1) translateY(0); }
-  to { opacity: 0; transform: scale(0.95) translateY(10px); }
+  const setLang = useCallback((newLang: string) => {
+    setGlobalLang(newLang);
+  }, []);
+
+  const t = useCallback(
+    (key: string): string => {
+      return translations[lang]?.[key] || translations["en"]?.[key] || key;
+    },
+    [lang]
+  );
+
+  return { t, lang, setLang };
 }
 
-.modal-overlay {
-  animation: modalOverlayIn 0.2s ease-out forwards;
-}
-.modal-overlay.closing {
-  animation: modalOverlayOut 0.15s ease-in forwards;
-}
-.modal-content {
-  animation: modalContentIn 0.25s ease-out forwards;
-}
-.modal-overlay.closing .modal-content {
-  animation: modalContentOut 0.15s ease-in forwards;
-}
-
-.modal-close-btn {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 50;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: hsl(var(--card));
-  border: 1px solid hsl(var(--border));
-  color: hsl(var(--muted-foreground));
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-.modal-close-btn:hover {
-  background: hsl(var(--accent));
-  color: hsl(var(--foreground));
-}
-
-/**
- * Using the elevate system.
- * Automatic contrast adjustment.
- *
- * <element className="hover-elevate" />
- * <element className="active-elevate-2" />
- *
- * // Using the tailwind utility when a data attribute is "on"
- * <element className="toggle-elevate data-[state=on]:toggle-elevated" />
- * // Or manually controlling the toggle state
- * <element className="toggle-elevate toggle-elevated" />
- *
- * Elevation systems have to handle many states.
- * - not-hovered, vs. hovered vs. active  (three mutually exclusive states)
- * - toggled or not
- * - focused or not (this is not handled with these utilities)
- *
- * Even without handling focused or not, this is six possible combinations that
- * need to be distinguished from eachother visually.
- */
-@layer utilities {
-
-  /* Hide ugly search cancel button in Chrome until we can style it properly */
-  input[type="search"]::-webkit-search-cancel-button {
-    @apply hidden;
-  }
-
-  /* Placeholder styling for contentEditable div */
-  [contenteditable][data-placeholder]:empty::before {
-    content: attr(data-placeholder);
-    color: hsl(var(--muted-foreground));
-    pointer-events: none;
-  }
-
-  /* .no-default-hover-elevate/no-default-active-elevate is an escape hatch so consumers of
-   * buttons/badges can remove the automatic brightness adjustment on interactions
-   * and program their own. */
-  .no-default-hover-elevate {}
-
-  .no-default-active-elevate {}
-
-
-  /**
-   * Toggleable backgrounds go behind the content. Hoverable/active goes on top.
-   * This way they can stack/compound. Both will overlap the parent's borders!
-   * So borders will be automatically adjusted both on toggle, and hover/active,
-   * and they will be compounded.
-   */
-  .toggle-elevate::before,
-  .toggle-elevate-2::before {
-    content: "";
-    pointer-events: none;
-    position: absolute;
-    inset: 0px;
-    /*border-radius: inherit;   match rounded corners */
-    border-radius: inherit;
-    z-index: -1;
-    /* sits behind content but above backdrop */
-  }
-
-  .toggle-elevate.toggle-elevated::before {
-    background-color: var(--elevate-2);
-  }
-
-  /* If there's a 1px border, adjust the inset so that it covers that parent's border */
-  .border.toggle-elevate::before {
-    inset: -1px;
-  }
-
-  /* Does not work on elements with overflow:hidden! */
-  .hover-elevate:not(.no-default-hover-elevate),
-  .active-elevate:not(.no-default-active-elevate),
-  .hover-elevate-2:not(.no-default-hover-elevate),
-  .active-elevate-2:not(.no-default-active-elevate) {
-    position: relative;
-    z-index: 0;
-  }
-
-  .hover-elevate:not(.no-default-hover-elevate)::after,
-  .active-elevate:not(.no-default-active-elevate)::after,
-  .hover-elevate-2:not(.no-default-hover-elevate)::after,
-  .active-elevate-2:not(.no-default-active-elevate)::after {
-    content: "";
-    pointer-events: none;
-    position: absolute;
-    inset: 0px;
-    /*border-radius: inherit;   match rounded corners */
-    border-radius: inherit;
-    z-index: 999;
-    /* sits in front of content */
-  }
-
-  .hover-elevate:hover:not(.no-default-hover-elevate)::after,
-  .active-elevate:active:not(.no-default-active-elevate)::after {
-    background-color: var(--elevate-1);
-  }
-
-  .hover-elevate-2:hover:not(.no-default-hover-elevate)::after,
-  .active-elevate-2:active:not(.no-default-active-elevate)::after {
-    background-color: var(--elevate-2);
-  }
-
-  /* If there's a 1px border, adjust the inset so that it covers that parent's border */
-  .border.hover-elevate:not(.no-hover-interaction-elevate)::after,
-  .border.active-elevate:not(.no-active-interaction-elevate)::after,
-  .border.hover-elevate-2:not(.no-hover-interaction-elevate)::after,
-  .border.active-elevate-2:not(.no-active-interaction-elevate)::after,
-  .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
-    inset: -1px;
-  }
-}
+export const languageNames: Record<string, string> = {
+  en: "English",
+  it: "Italiano",
+  fr: "Français",
+  de: "Deutsch",
+  es: "Español",
+  pt: "Português",
+  sv: "Svenska",
+};

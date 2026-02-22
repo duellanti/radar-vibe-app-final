@@ -1,0 +1,360 @@
+import { useState, useCallback, useEffect, useRef } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Plus, Crown, Radar, Loader2, MapPin, User, MessageCircle, Search, Compass, Settings } from "lucide-react";
+import RadarMap, { type RadarMapHandle } from "@/components/radar-map";
+import VibeDetail from "@/components/event-detail";
+import CreateVibeModal from "@/components/create-event-modal";
+import PremiumModal from "@/components/premium-modal";
+import ProfileModal from "@/components/profile-modal";
+import MessagingModal from "@/components/messaging-modal";
+import BussolaModal from "@/components/bussola-modal";
+import PremiumSettingsModal from "@/components/premium-settings-modal";
+import AdBanner, { InterstitialAd } from "@/components/ad-banner";
+import { useUserLocation, getDistanceKm } from "@/lib/store";
+import { useTranslation } from "@/lib/i18n";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import type { Vibe, User as UserType } from "@shared/schema";
+
+interface RadarPageProps {
+  user: Omit<UserType, "password">;
+  onLogout: () => void;
+}
+
+export default function RadarPage({ user, onLogout }: RadarPageProps) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const { location: userLocation } = useUserLocation();
+  const mapRef = useRef<RadarMapHandle>(null);
+
+  const [selectedVibe, setSelectedVibe] = useState<Vibe | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showMessaging, setShowMessaging] = useState(false);
+  const [showInterstitial, setShowInterstitial] = useState(false);
+  const [interstitialReason, setInterstitialReason] = useState("");
+  const [interstitialCallback, setInterstitialCallback] = useState<(() => void) | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [messageTarget, setMessageTarget] = useState<{ id: string; name: string } | null>(null);
+  const [showBussola, setShowBussola] = useState(false);
+  const [showPremiumSettings, setShowPremiumSettings] = useState(false);
+
+  const { data: vibes = [], isLoading: vibesLoading } = useQuery<Vibe[]>({
+    queryKey: ["/api/vibes"],
+    enabled: !!userLocation,
+    refetchInterval: 30000,
+  });
+
+  const { data: visibleUsers = [], isLoading: usersLoading } = useQuery<any[]>({
+    queryKey: ["/api/users/visible"],
+    enabled: !!userLocation,
+    refetchInterval: 30000,
+  });
+
+  const { data: currentUser } = useQuery<any>({
+    queryKey: ["/api/auth/me"],
+    refetchInterval: 60000,
+  });
+
+  const activeUser = currentUser || user;
+
+  useEffect(() => {
+    if (userLocation) {
+      apiRequest("POST", "/api/location", {
+        latitude: userLocation.lat,
+        longitude: userLocation.lng,
+      }).catch(() => {});
+    }
+  }, [userLocation]);
+
+  const subscribeMutation = useMutation({
+    mutationFn: async (plan: string) => {
+      const res = await apiRequest("POST", "/api/subscribe", { plan });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      toast({ title: "Premium activated!" });
+      setShowPremiumModal(false);
+    },
+  });
+
+  const invalidateMap = useCallback(() => {
+    mapRef.current?.invalidateSize();
+  }, []);
+
+  const closeModal = useCallback((setter: (v: boolean) => void) => {
+    setter(false);
+    invalidateMap();
+  }, [invalidateMap]);
+
+  const triggerInterstitial = useCallback((reason: string, callback?: () => void) => {
+    if (activeUser.isPremium) {
+      callback?.();
+      return;
+    }
+    setInterstitialReason(reason);
+    setInterstitialCallback(() => callback || null);
+    setShowInterstitial(true);
+  }, [activeUser.isPremium]);
+
+  const handleCreateVibeClick = useCallback(() => {
+    triggerInterstitial("Before creating a vibe", () => setShowCreateModal(true));
+  }, [triggerInterstitial]);
+
+  const handleInterstitialClose = useCallback(() => {
+    setShowInterstitial(false);
+    invalidateMap();
+    interstitialCallback?.();
+    setInterstitialCallback(null);
+  }, [interstitialCallback, invalidateMap]);
+
+  const handleVibeClick = useCallback((vibe: Vibe) => {
+    setSelectedVibe(vibe);
+  }, []);
+
+  const handleUserClick = useCallback((u: any) => {
+    setMessageTarget({ id: u.id, name: u.displayName || u.username });
+    setShowMessaging(true);
+  }, []);
+
+  const filteredVibes = searchQuery
+    ? vibes.filter(v => v.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        v.description?.toLowerCase().includes(searchQuery.toLowerCase()))
+    : vibes;
+
+  if (!userLocation) {
+    return (
+      <div className="h-screen w-full flex flex-col items-center justify-center bg-background gap-4">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        <p className="text-sm text-muted-foreground tracking-wider uppercase">{t("common.loading")}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-screen w-full flex flex-col bg-background relative">
+      <header className="flex items-center justify-between px-3 py-2 border-b border-border bg-background/95 backdrop-blur z-[50] gap-2 shrink-0 relative">
+        <div className="flex items-center gap-2">
+          <Radar className="w-5 h-5 text-primary" />
+          <h1 data-testid="text-header-title" className="font-serif text-base sm:text-lg font-bold text-primary tracking-wide">{t("app.name")}</h1>
+        </div>
+
+        <div className="flex items-center gap-1 sm:gap-2">
+          <button
+            data-testid="button-open-profile"
+            onClick={() => {
+              triggerInterstitial("Before editing profile", () => setShowProfileModal(true));
+            }}
+            className="w-10 h-10 rounded-full flex items-center justify-center text-muted-foreground active:scale-90 active:bg-card transition-all"
+          >
+            <User className="w-5 h-5" />
+          </button>
+
+          <button
+            data-testid="button-open-messages"
+            onClick={() => {
+              setMessageTarget(null);
+              setShowMessaging(true);
+            }}
+            className="w-10 h-10 rounded-full flex items-center justify-center text-muted-foreground active:scale-90 active:bg-card transition-all"
+          >
+            <MessageCircle className="w-5 h-5" />
+          </button>
+
+          {activeUser.isPremium && (
+            <>
+              <button
+                data-testid="button-open-bussola"
+                onClick={() => setShowBussola(true)}
+                className="w-10 h-10 rounded-full flex items-center justify-center text-muted-foreground active:scale-90 active:bg-card transition-all"
+              >
+                <Compass className="w-5 h-5" />
+              </button>
+              <button
+                data-testid="button-open-premium-settings"
+                onClick={() => setShowPremiumSettings(true)}
+                className="w-10 h-10 rounded-full flex items-center justify-center text-muted-foreground active:scale-90 active:bg-card transition-all"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+            </>
+          )}
+
+          <button
+            data-testid="button-create-vibe-header"
+            onClick={handleCreateVibeClick}
+            className="hidden sm:flex items-center gap-1 h-10 px-4 rounded-full bg-primary text-primary-foreground text-xs font-semibold tracking-wider uppercase active:scale-95 transition-transform"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            {t("header.createVibe")}
+          </button>
+
+          {activeUser.isPremium ? (
+            <div data-testid="badge-premium" className="flex items-center gap-1 h-8 px-3 rounded-full bg-primary/15 border border-primary/30">
+              <Crown className="w-3.5 h-3.5 text-primary" />
+              <span className="text-[10px] text-primary font-bold uppercase tracking-wider">{t("header.premiumBadge")}</span>
+            </div>
+          ) : (
+            <button
+              data-testid="button-open-premium"
+              onClick={() => setShowPremiumModal(true)}
+              className="flex items-center gap-1 h-10 px-4 rounded-full border border-primary/40 text-primary text-xs font-semibold tracking-wider uppercase active:scale-95 active:bg-primary/10 transition-all"
+            >
+              <Crown className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{t("header.premium")}</span>
+              <span className="sm:hidden">PRO</span>
+            </button>
+          )}
+        </div>
+      </header>
+
+      <div className="flex-1 relative overflow-hidden" style={{ zIndex: 1 }}>
+        {vibesLoading || usersLoading ? (
+          <div className="w-full h-full flex items-center justify-center">
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+          </div>
+        ) : (
+          <RadarMap
+            ref={mapRef}
+            userLocation={userLocation}
+            vibes={filteredVibes}
+            visibleUsers={visibleUsers}
+            isPremium={activeUser.isPremium}
+            onVibeClick={handleVibeClick}
+            onUserClick={handleUserClick}
+          />
+        )}
+
+        <div className="absolute bottom-20 right-3 z-[5] sm:hidden">
+          <button
+            data-testid="button-create-vibe-fab"
+            onClick={handleCreateVibeClick}
+            className="w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center active:scale-90 transition-transform"
+          >
+            <Plus className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="absolute top-3 left-3 z-[5]">
+          <div className="bg-background/80 backdrop-blur border border-border rounded-2xl px-3 py-2">
+            <div className="flex items-center gap-2">
+              <MapPin className="w-3 h-3 text-primary" />
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                {filteredVibes.length} {t("map.vibesNearby")} / {visibleUsers.length} {t("map.usersNearby")}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="absolute top-3 right-3 z-[5]">
+          <div className="flex flex-col gap-1.5 items-end">
+            <div className="flex items-center gap-1 bg-background/80 backdrop-blur border border-border rounded-full px-2.5 py-1">
+              <div className="w-2 h-2 rounded-full bg-red-500" />
+              <span className="text-[9px] text-muted-foreground uppercase tracking-wider">{t("map.legendFree")}</span>
+            </div>
+            <div className="flex items-center gap-1 bg-background/80 backdrop-blur border border-border rounded-full px-2.5 py-1">
+              <div className="w-2.5 h-2.5 rounded-full bg-[#B8860B] animate-pulse" />
+              <span className="text-[9px] text-primary uppercase tracking-wider">{t("map.legendPremium")}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className={`shrink-0 border-t border-border bg-background/95 backdrop-blur z-[50] relative px-3 py-2 ${!activeUser.isPremium ? "mb-[50px]" : ""}`}>
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            data-testid="input-search"
+            type="search"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t("search.placeholder")}
+            className="pl-10 text-sm h-11 rounded-full"
+          />
+        </div>
+      </div>
+
+      <AdBanner isPremium={activeUser.isPremium} />
+
+      {selectedVibe && userLocation && (
+        <VibeDetail
+          vibe={selectedVibe}
+          onClose={() => { setSelectedVibe(null); invalidateMap(); }}
+          distanceKm={getDistanceKm(
+            userLocation.lat, userLocation.lng,
+            selectedVibe.latitude, selectedVibe.longitude
+          )}
+          onMessage={() => {
+            setMessageTarget({ id: selectedVibe.creatorId, name: selectedVibe.title });
+            setSelectedVibe(null);
+            setShowMessaging(true);
+          }}
+        />
+      )}
+
+      {showCreateModal && userLocation && (
+        <CreateVibeModal
+          onClose={() => closeModal(setShowCreateModal)}
+          userLocation={userLocation}
+          isPremium={activeUser.isPremium}
+        />
+      )}
+
+      {showPremiumModal && (
+        <PremiumModal
+          onClose={() => closeModal(setShowPremiumModal)}
+          onSubscribe={(plan) => subscribeMutation.mutate(plan)}
+        />
+      )}
+
+      {showProfileModal && (
+        <ProfileModal
+          user={activeUser}
+          onClose={() => closeModal(setShowProfileModal)}
+          onLogout={onLogout}
+          onAdTrigger={(callback) => triggerInterstitial("Before changing profile", callback)}
+        />
+      )}
+
+      {showMessaging && (
+        <MessagingModal
+          currentUser={activeUser}
+          onClose={() => { closeModal(setShowMessaging); setMessageTarget(null); }}
+          initialUserId={messageTarget?.id}
+          initialUsername={messageTarget?.name}
+          onAdTrigger={() => triggerInterstitial("Before unlocking messages")}
+        />
+      )}
+
+      {showBussola && (
+        <BussolaModal
+          onClose={() => closeModal(setShowBussola)}
+          onUserClick={(u) => {
+            setMessageTarget(u);
+            setShowBussola(false);
+            setShowMessaging(true);
+          }}
+        />
+      )}
+
+      {showPremiumSettings && (
+        <PremiumSettingsModal
+          onClose={() => closeModal(setShowPremiumSettings)}
+          isPremium={activeUser.isPremium}
+        />
+      )}
+
+      {showInterstitial && (
+        <InterstitialAd
+          onClose={handleInterstitialClose}
+          reason={interstitialReason}
+        />
+      )}
+    </div>
+  );
+}

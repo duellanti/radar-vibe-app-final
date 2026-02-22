@@ -1,0 +1,140 @@
+import { useState, useEffect, useCallback } from "react";
+
+export type ThemePreset = "dark_luxury" | "gold" | "custom";
+
+interface CustomColors {
+  primary: string;
+  background: string;
+  card: string;
+  accent: string;
+}
+
+const THEME_KEY = "radarvibe_theme";
+const CUSTOM_COLORS_KEY = "radarvibe_custom_colors";
+
+const themePresets: Record<string, Record<string, string>> = {
+  dark_luxury: {
+    "--background": "0 0% 4%",
+    "--foreground": "43 30% 75%",
+    "--border": "0 0% 14%",
+    "--card": "0 0% 7%",
+    "--card-foreground": "43 30% 75%",
+    "--card-border": "0 0% 12%",
+    "--primary": "43 74% 49%",
+    "--primary-foreground": "0 0% 4%",
+    "--secondary": "43 10% 14%",
+    "--secondary-foreground": "43 30% 80%",
+    "--muted": "43 5% 12%",
+    "--muted-foreground": "43 10% 50%",
+    "--accent": "43 15% 12%",
+    "--accent-foreground": "43 30% 80%",
+    "--input": "0 0% 25%",
+    "--ring": "43 74% 49%",
+  },
+  gold: {
+    "--background": "43 50% 12%",
+    "--foreground": "0 0% 95%",
+    "--border": "43 40% 22%",
+    "--card": "43 45% 15%",
+    "--card-foreground": "0 0% 95%",
+    "--card-border": "43 40% 20%",
+    "--primary": "43 74% 49%",
+    "--primary-foreground": "0 0% 4%",
+    "--secondary": "43 30% 20%",
+    "--secondary-foreground": "0 0% 90%",
+    "--muted": "43 20% 18%",
+    "--muted-foreground": "43 20% 60%",
+    "--accent": "43 35% 18%",
+    "--accent-foreground": "0 0% 90%",
+    "--input": "43 30% 30%",
+    "--ring": "43 74% 49%",
+  },
+};
+
+function applyThemeVars(vars: Record<string, string>) {
+  const root = document.documentElement;
+  Object.entries(vars).forEach(([key, value]) => {
+    root.style.setProperty(key, value);
+  });
+}
+
+function clearThemeVars() {
+  const root = document.documentElement;
+  const allKeys = Object.keys(themePresets.dark_luxury);
+  allKeys.forEach((key) => {
+    root.style.removeProperty(key);
+  });
+}
+
+function hexToHSL(hex: string): string {
+  hex = hex.replace("#", "");
+  const r = parseInt(hex.substring(0, 2), 16) / 255;
+  const g = parseInt(hex.substring(2, 4), 16) / 255;
+  const b = parseInt(hex.substring(4, 6), 16) / 255;
+
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  let h = 0, s = 0;
+  const l = (max + min) / 2;
+
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+
+  return `${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%`;
+}
+
+export function useTheme() {
+  const [theme, setThemeState] = useState<ThemePreset>(() => {
+    return (localStorage.getItem(THEME_KEY) as ThemePreset) || "dark_luxury";
+  });
+
+  const [customColors, setCustomColorsState] = useState<CustomColors>(() => {
+    try {
+      const saved = localStorage.getItem(CUSTOM_COLORS_KEY);
+      return saved ? JSON.parse(saved) : { primary: "#B8860B", background: "#0A0A0A", card: "#121212", accent: "#1A1A0A" };
+    } catch {
+      return { primary: "#B8860B", background: "#0A0A0A", card: "#121212", accent: "#1A1A0A" };
+    }
+  });
+
+  const applyCurrentTheme = useCallback((t: ThemePreset, colors: CustomColors) => {
+    if (t === "custom") {
+      const customVars: Record<string, string> = {
+        ...themePresets.dark_luxury,
+        "--primary": hexToHSL(colors.primary),
+        "--background": hexToHSL(colors.background),
+        "--card": hexToHSL(colors.card),
+        "--accent": hexToHSL(colors.accent),
+        "--ring": hexToHSL(colors.primary),
+      };
+      applyThemeVars(customVars);
+    } else if (themePresets[t]) {
+      applyThemeVars(themePresets[t]);
+    } else {
+      clearThemeVars();
+    }
+  }, []);
+
+  useEffect(() => {
+    applyCurrentTheme(theme, customColors);
+  }, [theme, customColors, applyCurrentTheme]);
+
+  const setTheme = useCallback((t: ThemePreset) => {
+    localStorage.setItem(THEME_KEY, t);
+    setThemeState(t);
+  }, []);
+
+  const setCustomColors = useCallback((colors: CustomColors) => {
+    localStorage.setItem(CUSTOM_COLORS_KEY, JSON.stringify(colors));
+    setCustomColorsState(colors);
+  }, []);
+
+  return { theme, setTheme, customColors, setCustomColors };
+}

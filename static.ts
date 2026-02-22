@@ -1,80 +1,108 @@
-import { db } from "./db";
-import { vibes, users } from "@shared/schema";
+import express, { type Request, Response, NextFunction } from "express";
+import { registerRoutes } from "./routes";
+import { serveStatic } from "./static";
+import { createServer } from "http";
+import { seedDatabase } from "./seed";
 
-export async function seedDatabase() {
-  const existingVibes = await db.select().from(vibes).limit(1);
-  if (existingVibes.length > 0) return;
+const app = express();
+const httpServer = createServer(app);
 
-  const existingUsers = await db.select().from(users).limit(1);
+declare module "http" {
+  interface IncomingMessage {
+    rawBody: unknown;
+  }
+}
 
-  let demoUserId: string;
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    },
+  }),
+);
 
-  if (existingUsers.length === 0) {
-    const [demoUser] = await db.insert(users).values([
-      {
-        username: "demo",
-        password: "demo123",
-        displayName: "Demo User",
-        bio: "Exploring the vibe",
-        isPremium: false,
-        latitude: 48.8566,
-        longitude: 2.3522,
-        keywords: ["music", "art"],
-        language: "en",
-      },
-      {
-        username: "golduser",
-        password: "gold123",
-        displayName: "Gold Explorer",
-        bio: "Premium vibes only",
-        isPremium: true,
-        premiumPlan: "yearly",
-        latitude: 48.8600,
-        longitude: 2.3400,
-        instagram: "@goldexplorer",
-        discord: "goldexplorer#1234",
-        keywords: ["nightlife", "networking", "gaming"],
-        language: "en",
-      },
-    ]).returning();
-    demoUserId = demoUser.id;
+app.use(express.urlencoded({ extended: false }));
+
+export function log(message: string, source = "express") {
+  const formattedTime = new Date().toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+
+  console.log(`${formattedTime} [${source}] ${message}`);
+}
+
+app.use((req, res, next) => {
+  const start = Date.now();
+  const path = req.path;
+  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+
+  const originalResJson = res.json;
+  res.json = function (bodyJson, ...args) {
+    capturedJsonResponse = bodyJson;
+    return originalResJson.apply(res, [bodyJson, ...args]);
+  };
+
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (path.startsWith("/api")) {
+      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse) {
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      }
+
+      log(logLine);
+    }
+  });
+
+  next();
+});
+
+(async () => {
+  await registerRoutes(httpServer, app);
+
+  seedDatabase().catch((err) => {
+    console.error("Seed error:", err);
+  });
+
+  app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+
+    console.error("Internal Server Error:", err);
+
+    if (res.headersSent) {
+      return next(err);
+    }
+
+    return res.status(status).json({ message });
+  });
+
+  // importantly only setup vite in development and after
+  // setting up all the other routes so the catch-all route
+  // doesn't interfere with the other routes
+  if (process.env.NODE_ENV === "production") {
+    serveStatic(app);
   } else {
-    demoUserId = existingUsers[0].id;
+    const { setupVite } = await import("./vite");
+    await setupVite(httpServer, app);
   }
 
-  const now = new Date();
-  const h = (hours: number) => new Date(now.getTime() + hours * 60 * 60 * 1000);
-
-  const seedVibes = [
+  // ALWAYS serve the app on the port specified in the environment variable PORT
+  // Other ports are firewalled. Default to 5000 if not specified.
+  // this serves both the API and the client.
+  // It is the only port that is not firewalled.
+  const port = parseInt(process.env.PORT || "5000", 10);
+  httpServer.listen(
     {
-      creatorId: demoUserId,
-      title: "Rooftop Sunset Session",
-      description: "Chill vibes with panoramic city views and live music.",
-      latitude: 48.8606,
-      longitude: 2.3376,
-      type: "live" as const,
-      expiresAt: h(3),
+      port,
+      host: "0.0.0.0",
+      reusePort: true,
     },
-    {
-      creatorId: demoUserId,
-      title: "Underground Art Night",
-      description: "Secret gallery meets after-dark party.",
-      latitude: 48.8530,
-      longitude: 2.3499,
-      type: "live" as const,
-      expiresAt: h(2),
+    () => {
+      log(`serving on port ${port}`);
     },
-    {
-      creatorId: demoUserId,
-      title: "Startup Mixer",
-      description: "Connect with founders over craft cocktails.",
-      latitude: 48.8700,
-      longitude: 2.3508,
-      type: "live" as const,
-      expiresAt: h(4),
-    },
-  ];
-
-  await db.insert(vibes).values(seedVibes);
-  console.log("Database seeded with sample vibes and users");
-}
+  );
+})();

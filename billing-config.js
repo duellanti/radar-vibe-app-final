@@ -1,95 +1,19 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, real, boolean, timestamp } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod";
-
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  displayName: text("display_name"),
-  bio: text("bio"),
-  avatarUrl: text("avatar_url"),
-  isPremium: boolean("is_premium").default(false).notNull(),
-  premiumPlan: text("premium_plan"),
-  premiumExpiresAt: timestamp("premium_expires_at"),
-  ghostMode: boolean("ghost_mode").default(false).notNull(),
-  latitude: real("latitude"),
-  longitude: real("longitude"),
-  lastLocationUpdate: timestamp("last_location_update"),
-  instagram: text("instagram"),
-  discord: text("discord"),
-  psnId: text("psn_id"),
-  keywords: text("keywords").array().default(sql`'{}'::text[]`),
-  language: text("language").default("en").notNull(),
-  messagesToday: integer("messages_today").default(0).notNull(),
-  messagesResetAt: timestamp("messages_reset_at"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const vibes = pgTable("vibes", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  creatorId: varchar("creator_id").notNull(),
-  title: text("title").notNull(),
-  description: text("description"),
-  latitude: real("latitude").notNull(),
-  longitude: real("longitude").notNull(),
-  photoUrl: text("photo_url"),
-  photos: text("photos").array().default(sql`'{}'::text[]`),
-  type: text("type").notNull().default("live"),
-  scheduledAt: timestamp("scheduled_at"),
-  expiresAt: timestamp("expires_at").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const messages = pgTable("messages", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  senderId: varchar("sender_id").notNull(),
-  receiverId: varchar("receiver_id").notNull(),
-  content: text("content").notNull(),
-  type: text("type").default("text").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-});
-
-export const updateProfileSchema = z.object({
-  displayName: z.string().optional(),
-  bio: z.string().optional(),
-  avatarUrl: z.string().optional(),
-  instagram: z.string().optional(),
-  discord: z.string().optional(),
-  psnId: z.string().optional(),
-  keywords: z.array(z.string()).optional(),
-  language: z.string().optional(),
-});
-
-export const insertVibeSchema = createInsertSchema(vibes).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertMessageSchema = createInsertSchema(messages).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
-export type UpdateProfile = z.infer<typeof updateProfileSchema>;
-export type Vibe = typeof vibes.$inferSelect;
-export type InsertVibe = z.infer<typeof insertVibeSchema>;
-export type Message = typeof messages.$inferSelect;
-export type InsertMessage = z.infer<typeof insertMessageSchema>;
-
-export type VibeType = "live" | "planned";
-
-export const SUPPORTED_LANGUAGES = ["en", "it", "fr", "de", "es", "pt", "sv"] as const;
-export type SupportedLanguage = typeof SUPPORTED_LANGUAGES[number];
-
-export const FREE_MESSAGE_LIMIT = 3;
-export const LIVE_VIBE_DURATION_HOURS = 4;
-export const BUSSOLA_RADIUS_KM = 10;
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <title>Radar Vibe - Exclusive Events Near You</title>
+    <meta name="description" content="Discover exclusive private events near you with Radar Vibe. Black & Gold luxury event discovery platform." />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Fira+Code:wght@300..700&family=Geist+Mono:wght@100..900&family=Geist:wght@100..900&family=IBM+Plex+Mono:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;1,100;1,200;1,300;1,400;1,500;1,600;1,700&family=IBM+Plex+Sans:ital,wght@0,100..700;1,100..700&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Lora:ital,wght@0,400..700;1,400..700&family=Merriweather:ital,opsz,wght@0,18..144,300..900;1,18..144,300..900&family=Montserrat:ital,wght@0,100..900;1,100..900&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Outfit:wght@100..900&family=Oxanium:wght@200..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&family=Roboto:ital,wght@0,100..900;1,100..900&family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&family=Source+Serif+4:ital,opsz,wght@0,8..60,200..900;1,8..60,200..900&family=Space+Grotesk:wght@300..700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="./billing-config.js"></script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
